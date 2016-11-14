@@ -1494,6 +1494,56 @@ private:
 	double *QD;
 };
 
+// L1361-1409 from svm.cpp
+class R2_Qq: public Kernel
+{
+public:
+	R2_Qq(const PREFIX(problem)& prob, const svm_parameter& param)
+	:Kernel(prob.l, prob.x, param)
+	{
+		cache = new Cache(prob.l,(int)(param.cache_size*(1<<20)));
+		this->C = param.C;
+		QD = new double[prob.l];
+		for(int i=0;i<prob.l;i++)
+			QD[i]= (Qfloat)(this->*kernel_function)(i,i) + 1/C;
+	}
+	
+	Qfloat *get_Q(int i, int len) const
+	{
+		Qfloat *data;
+		int start;
+		if((start = cache->get_data(i,&data,len)) < len)
+		{
+			for(int j=start;j<len;j++)
+				data[j] = (Qfloat)(this->*kernel_function)(i,j);
+			if(i >= start && i < len)
+				data[i] += 1/C;
+		}
+		return data;
+	}
+	
+	double *get_QD() const
+	{
+		return QD;
+	}
+
+	void swap_index(int i, int j) const
+	{
+		cache->swap_index(i,j);
+		Kernel::swap_index(i,j);
+		swap(QD[i],QD[j]);
+	}
+
+	~R2_Qq()
+	{
+		delete cache;
+	}
+private:
+	Cache *cache;
+	double C;
+	double *QD;
+};
+
 class SVR_Q: public Kernel
 { 
 public:
@@ -1874,7 +1924,6 @@ static void solve_svdd(
 			r_square += alpha[i] * QD[i];
 
 	} else {
-		// HERE!!! TRY TO FIX THIS!
 		r_square = 0.0;
 		double rho = 0;
 		double obj = 0;
@@ -1882,7 +1931,7 @@ static void solve_svdd(
 		// Set the dual variables and normalize C
 		for(i=0;i<l;i++)
 		{
-			/// Technically this alpha is incorrect
+			// Technically this alpha is incorrect
 			C[i] /= sum_C;
 			alpha[i] = C[i];
 		}
@@ -1908,12 +1957,59 @@ static void solve_svdd(
         si->solve_timed_out = false;
 	}
 
-	info("R^2 = %f\n",r_square);
-	info("sum C = %f, obj = %f, rho = %f\n", sum_C, si->obj,si->rho);
+	info("R^2 = %f, obj = %f, rho = %f\n", r_square, si->obj,si->rho);
 
         delete[] C;
 	delete[] linear_term;
 	delete[] QD;
+	delete[] ones;
+}
+
+static void solve_r2(
+		const PREFIX(problem) *prob, const svm_parameter *param,
+		double *alpha, Solver::SolutionInfo* si)
+{
+	svm_parameter svdd_param = *param;	
+	svdd_param.C = 2;
+	
+	solve_svdd(prob,&svdd_param,alpha,si);
+}
+
+static void solve_r2q(
+		const PREFIX(problem) *prob, const svm_parameter *param,
+		double *alpha, Solver::SolutionInfo* si)
+{
+	int l = prob->l;
+	double *linear_term = new double[l];
+	double *C = new double[l];
+	schar *ones = new schar[l];
+	int i;
+
+	for(i=0;i<l;i++)
+		C[i] = INF;
+
+	for(i=0;i<l;i++)
+	{
+#ifdef _DENSE_REP
+		linear_term[i] = -0.5*(NAMESPACE::Kernel::k_function(prob->x+i,prob->x+i,*param) + 1.0/param->C);
+#else
+		linear_term[i] = -0.5*(NAMESPACE::Kernel::k_function(prob->x[i],prob->x[i],*param) + 1.0/param->C);
+#endif
+		ones[i] = 1;
+	}
+
+	alpha[0] = 1;
+	for(i=1;i<l;i++)
+		alpha[i] = 0;
+
+	Solver s;
+	s.Solve(l, R2_Qq(*prob,*param), linear_term, ones, alpha, C,
+		param->eps, si, param->shrinking, param->max_iter);
+
+	info("R^2 = %f\n", -2 *si->obj);
+
+		delete[] C;
+	delete[] linear_term;
 	delete[] ones;
 }
 
