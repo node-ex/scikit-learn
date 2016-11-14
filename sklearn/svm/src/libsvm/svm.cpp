@@ -1816,6 +1816,107 @@ static void solve_nu_svr(
 	delete[] y;
 }
 
+static void solve_svdd(
+	const PREFIX(problem) *prob, const svm_parameter *param,
+	double *alpha, Solver::SolutionInfo* si) 
+{
+	int l = prob->l;
+	double *QD = new double[l];
+	double *linear_term = new double[l];
+	schar *ones = new schar[l];
+
+	double *C = new double[l];
+	int i, j;
+
+	double r_square;
+
+	// prob->W does not sum to 1, param->C > 0
+	double sum_C = 0;
+	for(i=0;i<l;i++)
+	{
+		C[i] = prob->W[i] * param->C;
+		sum_C += C[i];
+	}
+
+	ONE_CLASS_Q Q = ONE_CLASS_Q(*prob, *param);
+	for(i=0;i<l;i++)
+	{
+		QD[i] = Q.get_QD()[i];
+		linear_term[i] = -0.5 * QD[i];
+	}
+
+	if(sum_C > 1) {
+
+		i = 0;
+		double sum_alpha = 1;
+		while(sum_alpha > 0)
+		{
+			alpha[i] = min(C[i], sum_alpha);
+			sum_alpha -= alpha[i];
+			++i;
+		}
+		for(;i<l;i++)
+			alpha[i] = 0;
+
+		for(i=0;i<l;i++)
+		{
+			ones[i] = 1;
+		}
+
+		Solver s;
+		s.Solve(l, Q, linear_term, ones, alpha, C, param->eps, 
+			si, param->shrinking, param->max_iter);
+
+		// \bar{R} = 2(obj-rho) + sum K_{ii}*alpha_i
+		// because rho = (a^Ta - \bar{R})/2
+		r_square = 2*(si->obj - si->rho);
+		for(i=0;i<l;i++)
+			r_square += alpha[i] * QD[i];
+
+	} else {
+		// HERE!!! TRY TO FIX THIS!
+		r_square = 0.0;
+		double rho = 0;
+		double obj = 0;
+
+		// Set the dual variables and normalize C
+		for(i=0;i<l;i++)
+		{
+			/// Technically this alpha is incorrect
+			C[i] /= sum_C;
+			alpha[i] = C[i];
+		}
+
+		// For normalised C_i
+		// rho = aTa/2 = .5  * sum sum C_i Q_ij C_j
+		// obj = 0.5*\bar{C} *(- sum C_i Q_ii + sum sum C_i Q_ij C_j )
+		// 0.5 for consistency with C > 1, where dual is divided by 2
+		for(i=0;i<l;i++)
+		{		
+			obj -= C[i] * Q.get_QD()[i] / 2;
+			rho += C[i] * Q.get_QD()[i] / 2;
+			for(j=i+1;j<l;j++)
+#ifdef _DENSE_REP
+                rho += C[i] * NAMESPACE::Kernel::k_function(prob->x+i,prob->x+j,*param) * C[j];
+#else
+                rho += C[i] * NAMESPACE::Kernel::k_function(prob->x[i],prob->x[j],*param) * C[j];
+#endif
+		}
+		si->obj = sum_C * (obj + rho);
+		si->rho = rho;
+
+        si->solve_timed_out = false;
+	}
+
+	info("R^2 = %f\n",r_square);
+	info("sum C = %f, obj = %f, rho = %f\n", sum_C, si->obj,si->rho);
+
+        delete[] C;
+	delete[] linear_term;
+	delete[] QD;
+	delete[] ones;
+}
+
 //
 // decision_function
 //
@@ -1853,6 +1954,10 @@ static decision_function svm_train_one(
 			si.upper_bound = Malloc(double,2*prob->l); 
  			solve_nu_svr(prob,param,alpha,&si);
  			break;
+		case SVDD:
+			si.upper_bound = Malloc(double,prob->l); 
+			solve_svdd(prob,param,alpha,&si);
+			break;
 	}
 
         *status |= si.solve_timed_out;
@@ -2353,7 +2458,8 @@ PREFIX(model) *PREFIX(train)(const PREFIX(problem) *prob, const svm_parameter *p
 
 	if(param->svm_type == ONE_CLASS ||
 	   param->svm_type == EPSILON_SVR ||
-	   param->svm_type == NU_SVR)
+	   param->svm_type == NU_SVR ||
+	   param->svm_type == SVDD)
 	{
 		// regression or one-class-svm
 		model->nr_class = 2;
@@ -2809,6 +2915,22 @@ double PREFIX(predict_values)(const PREFIX(model) *model, const PREFIX(node) *x,
 		else
 			return sum;
 	}
+	else if (model->param.svm_type == SVDD)
+	{
+		// Compute distance from center of hypersphere
+		// rho = (a^Ta - \bar{R})/2
+		double *sv_coef = model->sv_coef[0];
+		double tmp_value = NAMESPACE::Kernel::k_function(x,x,model->param); // x^T x - 2 x^T a
+		for(int i=0;i<model->l;i++)
+#ifdef _DENSE_REP
+			tmp_value -= 2 * sv_coef[i] * NAMESPACE::Kernel::k_function(x,model->SV+i,model->param);
+#else
+			tmp_value -= 2 * sv_coef[i] * NAMESPACE::Kernel::k_function(x,model->SV[i],model->param);
+#endif
+	
+		*dec_values = tmp_value + 2*model->rho[0];
+		return (*dec_values<=0?1:-1);
+	}
 	else
 	{
 		int nr_class = model->nr_class;
@@ -2876,7 +2998,8 @@ double PREFIX(predict)(const PREFIX(model) *model, const PREFIX(node) *x)
 	double *dec_values;
 	if(model->param.svm_type == ONE_CLASS ||
 	   model->param.svm_type == EPSILON_SVR ||
-	   model->param.svm_type == NU_SVR)
+	   model->param.svm_type == NU_SVR ||
+	   model->param.svm_type == SVDD)
 		dec_values = Malloc(double, 1);
 	else 
 		dec_values = Malloc(double, nr_class*(nr_class-1)/2);
@@ -2991,7 +3114,8 @@ const char *PREFIX(check_parameter)(const PREFIX(problem) *prob, const svm_param
 	   svm_type != NU_SVC &&
 	   svm_type != ONE_CLASS &&
 	   svm_type != EPSILON_SVR &&
-	   svm_type != NU_SVR)
+	   svm_type != NU_SVR &&
+	   svm_type != SVDD)
 		return "unknown svm type";
 	
 	// kernel_type, degree
@@ -3020,7 +3144,8 @@ const char *PREFIX(check_parameter)(const PREFIX(problem) *prob, const svm_param
 
 	if(svm_type == C_SVC ||
 	   svm_type == EPSILON_SVR ||
-	   svm_type == NU_SVR)
+	   svm_type == NU_SVR ||
+	   svm_type == SVDD)
 		if(param->C <= 0)
 			return "C <= 0";
 
@@ -3043,7 +3168,7 @@ const char *PREFIX(check_parameter)(const PREFIX(problem) *prob, const svm_param
 		return "probability != 0 and probability != 1";
 
 	if(param->probability == 1 &&
-	   svm_type == ONE_CLASS)
+	   (svm_type == ONE_CLASS || svm_type == SVDD))
 		return "one-class SVM probability output not supported yet";
 
 
