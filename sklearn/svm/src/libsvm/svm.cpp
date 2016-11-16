@@ -1494,18 +1494,24 @@ private:
 	double *QD;
 };
 
-// L1361-1409 from svm.cpp
 class R2_Qq: public Kernel
 {
 public:
 	R2_Qq(const PREFIX(problem)& prob, const svm_parameter& param)
 	:Kernel(prob.l, prob.x, param)
 	{
-		cache = new Cache(prob.l,(int)(param.cache_size*(1<<20)));
-		this->C = param.C;
-		QD = new double[prob.l];
-		for(int i=0;i<prob.l;i++)
-			QD[i]= (Qfloat)(this->*kernel_function)(i,i) + 1/C;
+		int l = prob.l;
+		int i;
+
+		cache = new Cache(l, (int)(param.cache_size*(1<<20)));
+		QD = new double[l];
+		C = new double[l];
+
+		for(i=0;i<l;i++)
+			C[i] = prob.W[i] * param.C;
+
+		for(i=0;i<l;i++)
+			QD[i]= (Qfloat)(this->*kernel_function)(i,i) + 1/C[i];
 	}
 	
 	Qfloat *get_Q(int i, int len) const
@@ -1517,7 +1523,7 @@ public:
 			for(int j=start;j<len;j++)
 				data[j] = (Qfloat)(this->*kernel_function)(i,j);
 			if(i >= start && i < len)
-				data[i] += 1/C;
+				data[i] += 1/C[i];
 		}
 		return data;
 	}
@@ -1532,15 +1538,18 @@ public:
 		cache->swap_index(i,j);
 		Kernel::swap_index(i,j);
 		swap(QD[i],QD[j]);
+		swap(C[i],C[j]);
 	}
 
 	~R2_Qq()
 	{
+		delete[] C;
+		delete[] QD;
 		delete cache;
 	}
 private:
 	Cache *cache;
-	double C;
+	double *C;
 	double *QD;
 };
 
@@ -1913,11 +1922,14 @@ static void solve_svdd(
 			ones[i] = 1;
 		}
 
+//	min 0.5(\alpha^T Q \alpha) + (-0.5 diag Q)^T \alpha
+//		e^T \alpha = 1
+//		0 <= alpha_i <= C_i
 		Solver s;
 		s.Solve(l, Q, linear_term, ones, alpha, C, param->eps, 
 			si, param->shrinking, param->max_iter);
 
-		// \bar{R} = 2(obj-rho) + sum K_{ii}*alpha_i
+		// \bar{R} = 2(obj - rho) + sum K_{ii}*alpha_i
 		// because rho = (a^Ta - \bar{R})/2
 		r_square = 2*(si->obj - si->rho);
 		for(i=0;i<l;i++)
@@ -1928,17 +1940,21 @@ static void solve_svdd(
 		double rho = 0;
 		double obj = 0;
 
+		info("*\n");
+		info("optimization skipped\n");
+		
 		// Set the dual variables and normalize C
 		for(i=0;i<l;i++)
 		{
 			// Technically this alpha is incorrect
 			C[i] /= sum_C;
 			alpha[i] = C[i];
+
+			si->upper_bound[i] = C[i];
 		}
 
-		// For normalised C_i
 		// rho = aTa/2 = .5  * sum sum C_i Q_ij C_j
-		// obj = 0.5*\bar{C} *(- sum C_i Q_ii + sum sum C_i Q_ij C_j )
+		// obj = 0.5*\bar{C} *(sum sum C_i Q_ij C_j - sum C_i Q_ii + )
 		// 0.5 for consistency with C > 1, where dual is divided by 2
 		for(i=0;i<l;i++)
 		{		
@@ -1946,9 +1962,9 @@ static void solve_svdd(
 			rho += C[i] * Q.get_QD()[i] / 2;
 			for(j=i+1;j<l;j++)
 #ifdef _DENSE_REP
-                rho += C[i] * NAMESPACE::Kernel::k_function(prob->x+i,prob->x+j,*param) * C[j];
+                rho += C[i] * C[j] * NAMESPACE::Kernel::k_function(prob->x+i,prob->x+j,*param);
 #else
-                rho += C[i] * NAMESPACE::Kernel::k_function(prob->x[i],prob->x[j],*param) * C[j];
+                rho += C[i] * C[j] * NAMESPACE::Kernel::k_function(prob->x[i],prob->x[j],*param);
 #endif
 		}
 		si->obj = sum_C * (obj + rho);
@@ -1957,22 +1973,30 @@ static void solve_svdd(
         si->solve_timed_out = false;
 	}
 
-	info("R^2 = %f, obj = %f, rho = %f\n", r_square, si->obj,si->rho);
+// An SMO algorithm in Fan et al., JMLR 6(2005), p. 1889--1918
+// Solves:
+//
+//	min 0.5(\alpha^T Q \alpha) + p^T \alpha
+//
+//		y^T \alpha = \delta
+//		y_i = +1 or -1
+//		0 <= alpha_i <= Cp for y_i = 1
+//		0 <= alpha_i <= Cn for y_i = -1
+//
+// Given:
+//
+//	Q, p, y, Cp, Cn, and an initial feasible point \alpha
+//	l is the size of vectors and matrices
+//	eps is the stopping tolerance
+//
+// solution will be put in \alpha, objective value will be put in obj
+//
+	info("C=%f, R^2 = %f, obj = %f, rho = %f\n", param->C, r_square, si->obj,si->rho);
 
         delete[] C;
 	delete[] linear_term;
 	delete[] QD;
 	delete[] ones;
-}
-
-static void solve_r2(
-		const PREFIX(problem) *prob, const svm_parameter *param,
-		double *alpha, Solver::SolutionInfo* si)
-{
-	svm_parameter svdd_param = *param;	
-	svdd_param.C = 2;
-	
-	solve_svdd(prob,&svdd_param,alpha,si);
 }
 
 static void solve_r2q(
@@ -2988,6 +3012,7 @@ double PREFIX(get_svr_probability)(const PREFIX(model) *model)
 }
 
 double PREFIX(predict_values)(const PREFIX(model) *model, const PREFIX(node) *x, double* dec_values)
+// double predict_values(const model *model, const node *x, double* dec_values)
 {
 	int i;
 	if(model->param.svm_type == ONE_CLASS ||
@@ -3019,13 +3044,15 @@ double PREFIX(predict_values)(const PREFIX(model) *model, const PREFIX(node) *x,
 		double tmp_value = NAMESPACE::Kernel::k_function(x,x,model->param); // x^T x - 2 x^T a
 		for(int i=0;i<model->l;i++)
 #ifdef _DENSE_REP
-			tmp_value -= 2 * sv_coef[i] * NAMESPACE::Kernel::k_function(x,model->SV+i,model->param);
+				tmp_value -= 2 * sv_coef[i] * NAMESPACE::Kernel::k_function(x,model->SV+i,model->param);
 #else
 			tmp_value -= 2 * sv_coef[i] * NAMESPACE::Kernel::k_function(x,model->SV[i],model->param);
 #endif
-	
-		*dec_values = tmp_value + 2*model->rho[0];
-		return (*dec_values<=0?1:-1);
+		
+		// Decision function is \bar{R} - (x^T x - 2 x^T a + a^T a)
+		// or in simpler terms:  - (x^T x - 2 x^T a + 2 rho)
+		*dec_values = - (tmp_value + 2*model->rho[0]);
+		return (- *dec_values<=0?1:-1);
 	}
 	else
 	{
