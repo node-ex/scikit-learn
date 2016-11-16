@@ -317,6 +317,11 @@ private:
 	static double dot(const PREFIX(node) &px, const PREFIX(node) &py);
 #endif
 
+	static double l1_norm(const PREFIX(node) *px, const PREFIX(node) *py);
+#ifdef _DENSE_REP
+	static double l1_norm(const PREFIX(node) &px, const PREFIX(node) &py);
+#endif
+
 	double kernel_linear(int i, int j) const
 	{
 		return dot(x[i],x[j]);
@@ -340,6 +345,10 @@ private:
 #else
 		return x[i][(int)(x[j][0].value)].value;
 #endif
+	}
+	double kernel_laplacian(int i, int j) const
+	{
+		return exp(-gamma*l1_norm(x[i],x[j]));
 	}
 };
 
@@ -367,6 +376,9 @@ Kernel::Kernel(int l, PREFIX(node) * const * x_, const svm_parameter& param)
 			break;
 		case PRECOMPUTED:
 			kernel_function = &Kernel::kernel_precomputed;
+			break;
+		case LAPLACIAN:
+			kernel_function = &Kernel::kernel_laplacian;
 			break;
 	}
 
@@ -431,6 +443,52 @@ double Kernel::dot(const PREFIX(node) *px, const PREFIX(node) *py)
 	return sum;
 }
 #endif
+
+#ifdef _DENSE_REP
+double Kernel::l1_norm(const PREFIX(node) *px, const PREFIX(node) *py)
+{
+	double sum = 0;
+
+	int dim = min(px->dim, py->dim);
+	for (int i = 0; i < dim; i++)
+		sum += fabs((px->values)[i] - (py->values)[i]);
+	return sum;
+}
+
+double Kernel::l1_norm(const PREFIX(node) &px, const PREFIX(node) &py)
+{
+	double sum = 0;
+
+	int dim = min(px.dim, py.dim);
+	for (int i = 0; i < dim; i++)
+		sum += fabs(px.values[i] - py.values[i]);
+	return sum;
+}
+#else
+double Kernel::l1_norm(const PREFIX(node) *px, const PREFIX(node) *py)
+{
+	double sum = 0;
+	while(px->index != -1 && py->index != -1)
+	{
+		if(px->index == py->index)
+		{
+			sum += fabs(px->value - py->value);
+			++px;
+			++py;
+		}
+		else
+		{
+			if(px->index > py->index)
+				++py;
+			else
+				++px;
+		}			
+	}
+	return sum;
+}
+#endif
+
+
 
 double Kernel::k_function(const PREFIX(node) *x, const PREFIX(node) *y,
 			  const svm_parameter& param)
@@ -504,6 +562,8 @@ double Kernel::k_function(const PREFIX(node) *x, const PREFIX(node) *y,
 			return x[(int)(y->value)].value;
 #endif
                     }
+		case LAPLACIAN:
+			return exp(-param.gamma*l1_norm(x,y));
 		default:
 			return 0;  // Unreachable 
 	}
@@ -3248,7 +3308,8 @@ const char *PREFIX(check_parameter)(const PREFIX(problem) *prob, const svm_param
 	   kernel_type != POLY &&
 	   kernel_type != RBF &&
 	   kernel_type != SIGMOID &&
-	   kernel_type != PRECOMPUTED)
+	   kernel_type != PRECOMPUTED &&
+	   kernel_type != LAPLACIAN)
 		return "unknown kernel type";
 
 	if(param->gamma < 0)

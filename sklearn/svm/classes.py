@@ -407,8 +407,8 @@ class SVC(BaseSVC):
 
     kernel : string, optional (default='rbf')
          Specifies the kernel type to be used in the algorithm.
-         It must be one of 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed' or
-         a callable.
+         It must be one of 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed', 'laplacian'
+         or a callable.
          If none is given, 'rbf' will be used. If a callable is given it is
          used to pre-compute the kernel matrix from data matrices; that matrix
          should be an array of shape ``(n_samples, n_samples)``.
@@ -418,7 +418,7 @@ class SVC(BaseSVC):
         Ignored by all other kernels.
 
     gamma : float, optional (default='auto')
-        Kernel coefficient for 'rbf', 'poly' and 'sigmoid'.
+        Kernel coefficient for 'rbf', 'poly', 'sigmoid' and 'laplacian'.
         If gamma is 'auto' then 1/n_features will be used instead.
 
     coef0 : float, optional (default=0.0)
@@ -562,8 +562,8 @@ class NuSVC(BaseSVC):
 
     kernel : string, optional (default='rbf')
          Specifies the kernel type to be used in the algorithm.
-         It must be one of 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed' or
-         a callable.
+         It must be one of 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed',
+         'laplacian' or a callable.
          If none is given, 'rbf' will be used. If a callable is given it is
          used to precompute the kernel matrix.
 
@@ -572,7 +572,7 @@ class NuSVC(BaseSVC):
         Ignored by all other kernels.
 
     gamma : float, optional (default='auto')
-        Kernel coefficient for 'rbf', 'poly' and 'sigmoid'.
+        Kernel coefficient for 'rbf', 'poly', 'sigmoid' and 'laplacian'.
         If gamma is 'auto' then 1/n_features will be used instead.
 
     coef0 : float, optional (default=0.0)
@@ -715,8 +715,8 @@ class SVR(BaseLibSVM, RegressorMixin):
 
     kernel : string, optional (default='rbf')
          Specifies the kernel type to be used in the algorithm.
-         It must be one of 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed' or
-         a callable.
+         It must be one of 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed',
+         'laplacian' or a callable.
          If none is given, 'rbf' will be used. If a callable is given it is
          used to precompute the kernel matrix.
 
@@ -725,7 +725,7 @@ class SVR(BaseLibSVM, RegressorMixin):
         Ignored by all other kernels.
 
     gamma : float, optional (default='auto')
-        Kernel coefficient for 'rbf', 'poly' and 'sigmoid'.
+        Kernel coefficient for 'rbf', 'poly', 'sigmoid' and 'laplacian'.
         If gamma is 'auto' then 1/n_features will be used instead.
 
     coef0 : float, optional (default=0.0)
@@ -830,8 +830,8 @@ class NuSVR(BaseLibSVM, RegressorMixin):
 
     kernel : string, optional (default='rbf')
          Specifies the kernel type to be used in the algorithm.
-         It must be one of 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed' or
-         a callable.
+         It must be one of 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed',
+         'laplacian' or a callable.
          If none is given, 'rbf' will be used. If a callable is given it is
          used to precompute the kernel matrix.
 
@@ -840,7 +840,7 @@ class NuSVR(BaseLibSVM, RegressorMixin):
         Ignored by all other kernels.
 
     gamma : float, optional (default='auto')
-        Kernel coefficient for 'rbf', 'poly' and 'sigmoid'.
+        Kernel coefficient for 'rbf', 'poly', 'sigmoid', and 'laplacian'.
         If gamma is 'auto' then 1/n_features will be used instead.
 
     coef0 : float, optional (default=0.0)
@@ -933,8 +933,8 @@ class OneClassSVM(BaseLibSVM):
     ----------
     kernel : string, optional (default='rbf')
          Specifies the kernel type to be used in the algorithm.
-         It must be one of 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed' or
-         a callable.
+         It must be one of 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed',
+         'laplacian' or a callable.
          If none is given, 'rbf' will be used. If a callable is given it is
          used to precompute the kernel matrix.
 
@@ -949,7 +949,7 @@ class OneClassSVM(BaseLibSVM):
         Ignored by all other kernels.
 
     gamma : float, optional (default='auto')
-        Kernel coefficient for 'rbf', 'poly' and 'sigmoid'.
+        Kernel coefficient for 'rbf', 'poly', 'sigmoid', and 'laplacian'.
         If gamma is 'auto' then 1/n_features will be used instead.
 
     coef0 : float, optional (default=0.0)
@@ -1068,8 +1068,8 @@ class SVDD(BaseLibSVM):
 
     kernel : string, optional (default='rbf')
          Specifies the kernel type to be used in the algorithm.
-         It must be one of 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed' or
-         a callable.
+         It must be one of 'linear', 'poly', 'rbf', 'sigmoid', 'precomputed',
+         'laplacian' or a callable.
          If none is given, 'rbf' will be used. If a callable is given it is
          used to precompute the kernel matrix.
 
@@ -1078,7 +1078,7 @@ class SVDD(BaseLibSVM):
         Ignored by all other kernels.
 
     gamma : float, optional (default='auto')
-        Kernel coefficient for 'rbf', 'poly' and 'sigmoid'.
+        Kernel coefficient for 'rbf', 'poly', 'sigmoid', and 'laplacian'.
         If gamma is 'auto' then 1/n_features will be used instead.
 
     coef0 : float, optional (default=0.0)

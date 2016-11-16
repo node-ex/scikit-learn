@@ -45,7 +45,7 @@ np.import_array()
 
 ################################################################################
 # Internal variables
-LIBSVM_KERNEL_TYPES = ['linear', 'poly', 'rbf', 'sigmoid', 'precomputed']
+LIBSVM_KERNEL_TYPES = ['linear', 'poly', 'rbf', 'sigmoid', 'precomputed', 'laplacian']
 
 
 ################################################################################
@@ -79,17 +79,17 @@ def fit(
         Type of SVM: C_SVC, NuSVC, OneClassSVM, EpsilonSVR, NuSVR, or SVDD
         respectively. 0 by default.
 
-    kernel : {'linear', 'rbf', 'poly', 'sigmoid', 'precomputed'}, optional
-        Kernel to use in the model: linear, polynomial, RBF, sigmoid
-        or precomputed. 'rbf' by default.
+    kernel : {'linear', 'rbf', 'poly', 'sigmoid', 'precomputed', 'laplacian'},
+        optional Kernel to use in the model: linear, polynomial, RBF, sigmoid,
+        precomputed or laplacian. 'rbf' by default.
 
     degree : int32, optional
         Degree of the polynomial kernel (only relevant if kernel is
         set to polynomial), 3 by default.
 
     gamma : float64, optional
-        Gamma parameter in RBF kernel (only relevant if kernel is set
-        to RBF). 0.1 by default.
+        Gamma parameter in RBF, sigmoid and laplacian kernel (only relevant 
+        if kernel is set to RBF, sigmoid or laplacian). 0.1 by default.
 
     coef0 : float64, optional
         Independent parameter in poly/sigmoid kernel. 0 by default.
@@ -290,12 +290,12 @@ def predict(np.ndarray[np.float64_t, ndim=2, mode='c'] X,
     X: array-like, dtype=float, size=[n_samples, n_features]
     svm_type : {0, 1, 2, 3, 4, 5}
         Type of SVM: C SVC, nu SVC, one class, epsilon SVR, nu SVR, or SVDD
-    kernel : {'linear', 'rbf', 'poly', 'sigmoid', 'precomputed'}
+    kernel : {'linear', 'rbf', 'poly', 'sigmoid', 'precomputed', 'laplacian'}
         Type of kernel.
     degree : int
         Degree of the polynomial kernel.
     gamma : float
-        Gamma parameter in RBF kernel.
+        Gamma parameter in RBF, sigmoid and laplacian kernel.
     coef0 : float
         Independent parameter in poly/sigmoid kernel.
 
@@ -364,7 +364,7 @@ def predict_proba(
     Parameters
     ----------
     X: array-like, dtype=float
-    kernel : {'linear', 'rbf', 'poly', 'sigmoid', 'precomputed'}
+    kernel : {'linear', 'rbf', 'poly', 'sigmoid', 'precomputed', 'laplacian'}
 
     Returns
     -------
@@ -485,17 +485,17 @@ def cross_validation(
     svm_type : {0, 1, 2, 3, 4, 5}
         Type of SVM: C SVC, nu SVC, one class, epsilon SVR, nu SVR, or SVDD
 
-    kernel : {'linear', 'rbf', 'poly', 'sigmoid', 'precomputed'}
-        Kernel to use in the model: linear, polynomial, RBF, sigmoid
-        or precomputed.
+    kernel : {'linear', 'rbf', 'poly', 'sigmoid', 'precomputed', 'laplacian'}
+        Kernel to use in the model: linear, polynomial, RBF, sigmoid,
+        precomputed or laplacian.
 
     degree : int
         Degree of the polynomial kernel (only relevant if kernel is
         set to polynomial)
 
     gamma : float
-        Gamma parameter in RBF kernel (only relevant if kernel is set
-        to RBF)
+        Gamma parameter in RBF, sigmoid and laplacian kernel (only relevant
+        if kernel is set to RBF, sigmoid or laplacian)
 
     coef0 : float
         Independent parameter in poly/sigmoid kernel.
