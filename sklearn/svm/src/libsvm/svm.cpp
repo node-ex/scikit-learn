@@ -1571,7 +1571,7 @@ public:
 			C[i] = prob.W[i] * param.C;
 
 		for(i=0;i<l;i++)
-			QD[i]= (Qfloat)(this->*kernel_function)(i,i) + 1/C[i];
+			QD[i]= (Qfloat)(this->*kernel_function)(i,i) + 0.25/C[i];
 	}
 	
 	Qfloat *get_Q(int i, int len) const
@@ -1583,7 +1583,7 @@ public:
 			for(int j=start;j<len;j++)
 				data[j] = (Qfloat)(this->*kernel_function)(i,j);
 			if(i >= start && i < len)
-				data[i] += 1/C[i];
+				data[i] += 0.25/C[i];
 		}
 		return data;
 	}
@@ -2070,14 +2070,18 @@ static void solve_r2q(
 	int i;
 
 	for(i=0;i<l;i++)
-		C[i] = INF;
+		C[i] = prob.W[i] * param.C;
 
+	// There are two problems with this initialization:
+	//  1. it produces and equivalen problem only if C=const, bust still in this case 
+	//   the value `-2 *si->obj` is `R + 0.5/C` and ont `R`.
+	//  2. the classs R2_Qq and here should use 1/(4C) according to eq. 36 in [Chang, Lee, Lin; 2013].
 	for(i=0;i<l;i++)
 	{
 #ifdef _DENSE_REP
-		linear_term[i] = -0.5*(NAMESPACE::Kernel::k_function(prob->x+i,prob->x+i,*param) + 1.0/param->C);
+		linear_term[i] = -0.5*(NAMESPACE::Kernel::k_function(prob->x+i,prob->x+i,*param) + 1.0/C[i]);
 #else
-		linear_term[i] = -0.5*(NAMESPACE::Kernel::k_function(prob->x[i],prob->x[i],*param) + 1.0/param->C);
+		linear_term[i] = -0.5*(NAMESPACE::Kernel::k_function(prob->x[i],prob->x[i],*param) + 1.0/C[i]);
 #endif
 		ones[i] = 1;
 	}
@@ -2086,11 +2090,14 @@ static void solve_r2q(
 	for(i=1;i<l;i++)
 		alpha[i] = 0;
 
+	for(i=0;i<l;i++)
+		C[i] = INF;
+
 	Solver s;
 	s.Solve(l, R2_Qq(*prob,*param), linear_term, ones, alpha, C,
 		param->eps, si, param->shrinking, param->max_iter);
 
-	info("R^2 = %f\n", -2 *si->obj);
+	// info("R^2 = %f\n", -2 *si->obj);
 
 		delete[] C;
 	delete[] linear_term;
@@ -2135,6 +2142,10 @@ static decision_function svm_train_one(
  			solve_nu_svr(prob,param,alpha,&si);
  			break;
 		case SVDD:
+			si.upper_bound = Malloc(double,prob->l); 
+			solve_svdd(prob,param,alpha,&si);
+			break;
+		case R2q:
 			si.upper_bound = Malloc(double,prob->l); 
 			solve_svdd(prob,param,alpha,&si);
 			break;
@@ -2639,7 +2650,8 @@ PREFIX(model) *PREFIX(train)(const PREFIX(problem) *prob, const svm_parameter *p
 	if(param->svm_type == ONE_CLASS ||
 	   param->svm_type == EPSILON_SVR ||
 	   param->svm_type == NU_SVR ||
-	   param->svm_type == SVDD)
+	   param->svm_type == SVDD ||
+	   param->svm_type == R2q)
 	{
 		// regression or one-class-svm
 		model->nr_class = 2;
@@ -3096,7 +3108,8 @@ double PREFIX(predict_values)(const PREFIX(model) *model, const PREFIX(node) *x,
 		else
 			return sum;
 	}
-	else if (model->param.svm_type == SVDD)
+	else if (model->param.svm_type == SVDD ||
+			 model->param.svm_type == R2q)
 	{
 		// Compute distance from center of hypersphere
 		// rho = (a^Ta - \bar{R})/2
@@ -3182,7 +3195,8 @@ double PREFIX(predict)(const PREFIX(model) *model, const PREFIX(node) *x)
 	if(model->param.svm_type == ONE_CLASS ||
 	   model->param.svm_type == EPSILON_SVR ||
 	   model->param.svm_type == NU_SVR ||
-	   model->param.svm_type == SVDD)
+	   model->param.svm_type == SVDD ||
+	   model->param.svm_type == R2q)
 		dec_values = Malloc(double, 1);
 	else 
 		dec_values = Malloc(double, nr_class*(nr_class-1)/2);
@@ -3298,7 +3312,8 @@ const char *PREFIX(check_parameter)(const PREFIX(problem) *prob, const svm_param
 	   svm_type != ONE_CLASS &&
 	   svm_type != EPSILON_SVR &&
 	   svm_type != NU_SVR &&
-	   svm_type != SVDD)
+	   svm_type != SVDD &&
+	   svm_type != R2q)
 		return "unknown svm type";
 	
 	// kernel_type, degree
@@ -3329,7 +3344,8 @@ const char *PREFIX(check_parameter)(const PREFIX(problem) *prob, const svm_param
 	if(svm_type == C_SVC ||
 	   svm_type == EPSILON_SVR ||
 	   svm_type == NU_SVR ||
-	   svm_type == SVDD)
+	   svm_type == SVDD ||
+	   svm_type == R2q)
 		if(param->C <= 0)
 			return "C <= 0";
 
@@ -3352,7 +3368,7 @@ const char *PREFIX(check_parameter)(const PREFIX(problem) *prob, const svm_param
 		return "probability != 0 and probability != 1";
 
 	if(param->probability == 1 &&
-	   (svm_type == ONE_CLASS || svm_type == SVDD))
+	   (svm_type == ONE_CLASS || svm_type == SVDD || svm_type == R2q))
 		return "one-class SVM probability output not supported yet";
 
 
