@@ -39,7 +39,7 @@ struct svm_csr_problem
 };
 
 
-enum { C_SVC, NU_SVC, ONE_CLASS, EPSILON_SVR, NU_SVR, SVDD };	/* svm_type */
+enum { C_SVC, NU_SVC, ONE_CLASS, EPSILON_SVR, NU_SVR, SVDD_L1, SVDD_L2 };	/* svm_type */
 enum { LINEAR, POLY, RBF, SIGMOID, PRECOMPUTED, LAPLACIAN }; /* kernel_type */
 
 struct svm_parameter

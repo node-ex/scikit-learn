@@ -1106,6 +1106,9 @@ class SVDD(BaseLibSVM):
         The seed of the pseudo random number generator to use when
         shuffling the data for probability estimation.
 
+    l2_penalty : bool, default: False
+        Use L2 penalty on the slack variables instead of the typical L1 penalty.
+
     Attributes
     ----------
     support_ : array-like, shape = [n_SV]
@@ -1130,12 +1133,19 @@ class SVDD(BaseLibSVM):
     """
     def __init__(self, C=1.0, kernel='rbf', degree=3, gamma='auto', coef0=0.0,
                  tol=1e-3, shrinking=True, cache_size=200,
-                 verbose=False, max_iter=-1, random_state=None):
-
-        super(SVDD, self).__init__(
-            'svdd', kernel, degree, gamma, coef0, tol, C, 0., 0.,
-            shrinking, False, cache_size, None, verbose, max_iter,
-            random_state)
+                 verbose=False, max_iter=-1, random_state=None,
+                 l2_penalty=False):
+        if l2_penalty:
+            super(SVDD, self).__init__(
+                'svdd_l2', kernel, degree, gamma, coef0, tol, C, 0., 0.,
+                shrinking, False, cache_size, None, verbose, max_iter,
+                random_state)
+        else:
+            super(SVDD, self).__init__(
+                'svdd_l1', kernel, degree, gamma, coef0, tol, C, 0., 0.,
+                shrinking, False, cache_size, None, verbose, max_iter,
+                random_state)
+        self.l2_penalty = l2_penalty
 
     def fit(self, X, y=None, sample_weight=None, **params):
         """

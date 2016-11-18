@@ -22,7 +22,7 @@ from ..exceptions import ConvergenceWarning
 from ..exceptions import NotFittedError
 
 
-LIBSVM_IMPL = ['c_svc', 'nu_svc', 'one_class', 'epsilon_svr', 'nu_svr', 'svdd']
+LIBSVM_IMPL = ['c_svc', 'nu_svc', 'one_class', 'epsilon_svr', 'nu_svr', 'svdd_l1', 'svdd_l2']
 
 
 def _one_vs_one_coef(dual_coef, n_support, support_vectors):
@@ -69,7 +69,7 @@ class BaseLibSVM(six.with_metaclass(ABCMeta, BaseEstimator)):
     # The order of these must match the integer values in LibSVM.
     # XXX These are actually the same in the dense case. Need to factor
     # this out.
-    _sparse_kernels = ["linear", "poly", "rbf", "sigmoid", "precomputed"]
+    _sparse_kernels = ["linear", "poly", "rbf", "sigmoid", "precomputed", "laplacian"]
 
     @abstractmethod
     def __init__(self, impl, kernel, degree, gamma, coef0,

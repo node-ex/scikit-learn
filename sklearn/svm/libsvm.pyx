@@ -75,9 +75,9 @@ def fit(
     Y : array, dtype=float64, size=[n_samples]
         target vector
 
-    svm_type : {0, 1, 2, 3, 4, 5}, optional
-        Type of SVM: C_SVC, NuSVC, OneClassSVM, EpsilonSVR, NuSVR, or SVDD
-        respectively. 0 by default.
+    svm_type : {0, 1, 2, 3, 4, 5, 6}, optional
+        Type of SVM: C_SVC, NuSVC, OneClassSVM, EpsilonSVR, NuSVR, SVDD-L1, or
+        SVDD-L2 respectively. 0 by default.
 
     kernel : {'linear', 'rbf', 'poly', 'sigmoid', 'precomputed', 'laplacian'},
         optional Kernel to use in the model: linear, polynomial, RBF, sigmoid,
@@ -288,8 +288,9 @@ def predict(np.ndarray[np.float64_t, ndim=2, mode='c'] X,
     Parameters
     ----------
     X: array-like, dtype=float, size=[n_samples, n_features]
-    svm_type : {0, 1, 2, 3, 4, 5}
-        Type of SVM: C SVC, nu SVC, one class, epsilon SVR, nu SVR, or SVDD
+    svm_type : {0, 1, 2, 3, 4, 5, 6}
+        Type of SVM: C SVC, nu SVC, one class, epsilon SVR, nu SVR, SVDD-L1,
+        or SVDD-L2.
     kernel : {'linear', 'rbf', 'poly', 'sigmoid', 'precomputed', 'laplacian'}
         Type of kernel.
     degree : int
@@ -482,8 +483,9 @@ def cross_validation(
     Y: array, dtype=float, size=[n_samples]
         target vector
 
-    svm_type : {0, 1, 2, 3, 4, 5}
-        Type of SVM: C SVC, nu SVC, one class, epsilon SVR, nu SVR, or SVDD
+    svm_type : {0, 1, 2, 3, 4, 5, 6}
+        Type of SVM: C SVC, nu SVC, one class, epsilon SVR, nu SVR, SVDD-L1,
+        or SVDD-L2.
 
     kernel : {'linear', 'rbf', 'poly', 'sigmoid', 'precomputed', 'laplacian'}
         Kernel to use in the model: linear, polynomial, RBF, sigmoid,
