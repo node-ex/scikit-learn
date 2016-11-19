@@ -21,7 +21,8 @@ from ..exceptions import ConvergenceWarning
 from ..exceptions import NotFittedError
 
 
-LIBSVM_IMPL = ['c_svc', 'nu_svc', 'one_class', 'epsilon_svr', 'nu_svr']
+LIBSVM_IMPL = ['c_svc', 'nu_svc', 'one_class', 'epsilon_svr', 'nu_svr',
+               'svdd_l1']
 
 
 def _one_vs_one_coef(dual_coef, n_support, support_vectors):
@@ -155,7 +156,8 @@ class BaseLibSVM(six.with_metaclass(ABCMeta, BaseEstimator)):
         solver_type = LIBSVM_IMPL.index(self._impl)
 
         # input validation
-        if solver_type != 2 and X.shape[0] != y.shape[0]:
+        if not (solver_type == 2 or solver_type == 5) \
+                and X.shape[0] != y.shape[0]:
             raise ValueError("X and y have incompatible shapes.\n" +
                              "X has %s samples, but y has %s." %
                              (X.shape[0], y.shape[0]))

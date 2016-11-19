@@ -49,18 +49,22 @@ def check_svm_model_equal(dense_svm, sparse_svm, X_train, y_train, X_test):
     assert_true(sparse.issparse(sparse_svm.dual_coef_))
     assert_array_almost_equal(dense_svm.support_vectors_,
                               sparse_svm.support_vectors_.toarray())
-    assert_array_almost_equal(dense_svm.dual_coef_, sparse_svm.dual_coef_.toarray())
+    assert_array_almost_equal(dense_svm.dual_coef_,
+                              sparse_svm.dual_coef_.toarray())
     if dense_svm.kernel == "linear":
         assert_true(sparse.issparse(sparse_svm.coef_))
-        assert_array_almost_equal(dense_svm.coef_, sparse_svm.coef_.toarray())
+        assert_array_almost_equal(dense_svm.coef_,
+                                  sparse_svm.coef_.toarray())
     assert_array_almost_equal(dense_svm.support_, sparse_svm.support_)
-    assert_array_almost_equal(dense_svm.predict(X_test_dense), sparse_svm.predict(X_test))
+    assert_array_almost_equal(dense_svm.predict(X_test_dense),
+                              sparse_svm.predict(X_test))
     assert_array_almost_equal(dense_svm.decision_function(X_test_dense),
                               sparse_svm.decision_function(X_test))
     assert_array_almost_equal(dense_svm.decision_function(X_test_dense),
                               sparse_svm.decision_function(X_test_dense))
-    if isinstance(dense_svm, svm.OneClassSVM):
-        msg = "cannot use sparse input in 'OneClassSVM' trained on dense data"
+    if isinstance(dense_svm, (svm.OneClassSVM, svm.SVDD)):
+        msg = "cannot use sparse input in '%s' trained on dense data" \
+              % (dense_svm.__class__.__name__,)
     else:
         assert_array_almost_equal(dense_svm.predict_proba(X_test_dense),
                                   sparse_svm.predict_proba(X_test), 4)
@@ -275,6 +279,24 @@ def test_sparse_oneclasssvm():
         for kernel in kernels:
             clf = svm.OneClassSVM(kernel=kernel, random_state=0)
             sp_clf = svm.OneClassSVM(kernel=kernel, random_state=0)
+            check_svm_model_equal(clf, sp_clf, *dataset)
+
+
+def test_sparse_svdd():
+    """Check that sparse SVDD gives the same result as dense SVDD
+    """
+    # many class dataset:
+    X_blobs, _ = make_blobs(n_samples=100, centers=10, random_state=0)
+    X_blobs = sparse.csr_matrix(X_blobs)
+
+    datasets = [[X_sp, None, T], [X2_sp, None, T2],
+                [X_blobs[:80], None, X_blobs[80:]],
+                [iris.data, None, iris.data]]
+    kernels = ["linear", "poly", "rbf", "sigmoid"]
+    for dataset in datasets:
+        for kernel in kernels:
+            clf = svm.SVDD(kernel=kernel, random_state=0)
+            sp_clf = svm.SVDD(kernel=kernel, random_state=0)
             check_svm_model_equal(clf, sp_clf, *dataset)
 
 
