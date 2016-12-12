@@ -108,8 +108,8 @@ struct svm_model *set_model(struct svm_parameter *param, int nr_class,
                             char *SV, npy_intp *SV_dims,
                             char *support, npy_intp *support_dims,
                             npy_intp *sv_coef_strides,
-                            char *sv_coef, char *rho, char *nSV,
-                            char *probA, char *probB)
+                            char *sv_coef, char *rho, char *obj,
+                            char *nSV, char *probA, char *probB)
 {
     struct svm_model *model;
     double *dsv_coef = (double *) sv_coef;
@@ -127,6 +127,8 @@ struct svm_model *set_model(struct svm_parameter *param, int nr_class,
         goto sv_coef_error;
     if ((model->rho = malloc( m * sizeof(double))) == NULL)
         goto rho_error;
+    if ((model->obj = malloc( m * sizeof(double))) == NULL)
+        goto obj_error;
 
     model->nr_class = nr_class;
     model->param = *param;
@@ -160,6 +162,10 @@ struct svm_model *set_model(struct svm_parameter *param, int nr_class,
         (model->rho)[i] = -((double *) rho)[i];
     }
 
+    for (i=0; i<m; ++i) {
+        (model->obj)[i] = ((double *) obj)[i];
+    }
+
     /*
      * just to avoid segfaults, these features are not wrapped but
      * svm_destroy_model will try to free them.
@@ -186,6 +192,8 @@ probB_error:
 probA_error:
     free(model->SV);
 SV_error:
+    free(model->obj);
+obj_error:
     free(model->rho);
 rho_error:
     free(model->sv_coef);
@@ -242,6 +250,16 @@ void copy_intercept(char *data, struct svm_model *model, npy_intp *dims)
         t = model->rho[i];
         /* we do this to avoid ugly -0.0 */
         *ddata = (t != 0) ? -t : 0;
+        ++ddata;
+    }
+}
+
+void copy_dual_objective(char *data, struct svm_model *model, npy_intp *dims)
+{
+    npy_intp i, n = dims[0];
+    double t, *ddata = (double *) data;
+    for (i=0; i<n; ++i) {
+        *ddata = model->obj[i];
         ++ddata;
     }
 }
@@ -365,6 +383,7 @@ int free_model(struct svm_model *model)
        set_model */
     /* free(model->sv_ind); */
     free(model->sv_coef);
+    free(model->obj);
     free(model->rho);
     free(model->label);
     free(model->probA);

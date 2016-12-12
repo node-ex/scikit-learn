@@ -28,7 +28,7 @@ cdef extern from "libsvm_sparse_helper.c":
                             char *SV_data, np.npy_intp *SV_indices_dims,
                             char *SV_indices, np.npy_intp *SV_intptr_dims,
                             char *SV_intptr,
-                            char *sv_coef, char *rho, char *nSV,
+                            char *sv_coef, char *rho, char *obj, char *nSV,
                             char *probA, char *probB)
     svm_parameter *set_parameter (int , int , int , double, double ,
                                   double , double , double , double,
@@ -37,6 +37,7 @@ cdef extern from "libsvm_sparse_helper.c":
     void copy_sv_coef   (char *, svm_csr_model *)
     void copy_support   (char *, svm_csr_model *)
     void copy_intercept (char *, svm_csr_model *, np.npy_intp *)
+    void copy_dual_objective (char *, svm_csr_model *, np.npy_intp *)
     int copy_predict (char *, svm_csr_model *, np.npy_intp *, char *)
     int csr_copy_predict_values (np.npy_intp *data_size, char *data, np.npy_intp *index_size,
         	char *index, np.npy_intp *intptr_size, char *size,
@@ -169,6 +170,10 @@ def libsvm_sparse_train ( int n_features,
     intercept = np.empty(n_class*(n_class-1)//2, dtype=np.float64)
     copy_intercept (intercept.data, model, intercept.shape)
 
+    cdef np.ndarray dual_objective
+    dual_objective = np.empty(n_class*(n_class-1)/2, dtype=np.float64)
+    copy_dual_objective (dual_objective.data, model, dual_objective.shape)
+
     # copy model.SV
     # we erase any previous information in SV
     # TODO: custom kernel
@@ -209,8 +214,8 @@ def libsvm_sparse_train ( int n_features,
     free_problem(problem)
     free_param(param)
 
-    return (support, support_vectors_, sv_coef_data, intercept, n_class_SV,
-            probA, probB, fit_status)
+    return (support, support_vectors_, sv_coef_data, intercept, dual_objective,
+            n_class_SV, probA, probB, fit_status)
 
 
 def libsvm_sparse_predict (np.ndarray[np.float64_t, ndim=1, mode='c'] T_data,
@@ -220,8 +225,9 @@ def libsvm_sparse_predict (np.ndarray[np.float64_t, ndim=1, mode='c'] T_data,
                             np.ndarray[np.int32_t,   ndim=1, mode='c'] SV_indices,
                             np.ndarray[np.int32_t,   ndim=1, mode='c'] SV_indptr,
                             np.ndarray[np.float64_t, ndim=1, mode='c'] sv_coef,
+                            np.ndarray[np.float64_t, ndim=1, mode='c'] intercept, 
                             np.ndarray[np.float64_t, ndim=1, mode='c']
-                            intercept, int svm_type, int kernel_type, int
+                            dual_objective, int svm_type, int kernel_type, int
                             degree, double gamma, double coef0, double
                             eps, double C,
                             np.ndarray[np.float64_t, ndim=1] class_weight,
@@ -269,7 +275,7 @@ def libsvm_sparse_predict (np.ndarray[np.float64_t, ndim=1, mode='c'] T_data,
     model = csr_set_model(param, <int> nSV.shape[0], SV_data.data,
                           SV_indices.shape, SV_indices.data,
                           SV_indptr.shape, SV_indptr.data,
-                          sv_coef.data, intercept.data,
+                          sv_coef.data, intercept.data, dual_objective.data,
                           nSV.data, probA.data, probB.data)
     #TODO: use check_model
     dec_values = np.empty(T_indptr.shape[0]-1)
@@ -295,8 +301,9 @@ def libsvm_sparse_predict_proba(
     np.ndarray[np.int32_t,   ndim=1, mode='c'] SV_indices,
     np.ndarray[np.int32_t,   ndim=1, mode='c'] SV_indptr,
     np.ndarray[np.float64_t, ndim=1, mode='c'] sv_coef,
+    np.ndarray[np.float64_t, ndim=1, mode='c'] intercept, 
     np.ndarray[np.float64_t, ndim=1, mode='c']
-    intercept, int svm_type, int kernel_type, int
+    dual_objective, int svm_type, int kernel_type, int
     degree, double gamma, double coef0, double
     eps, double C,
     np.ndarray[np.float64_t, ndim=1] class_weight,
@@ -323,7 +330,7 @@ def libsvm_sparse_predict_proba(
     model = csr_set_model(param, <int> nSV.shape[0], SV_data.data,
                           SV_indices.shape, SV_indices.data,
                           SV_indptr.shape, SV_indptr.data,
-                          sv_coef.data, intercept.data,
+                          sv_coef.data, intercept.data, dual_objective.data,
                           nSV.data, probA.data, probB.data)
     #TODO: use check_model
     cdef np.npy_intp n_class = get_nr(model)
@@ -353,8 +360,9 @@ def libsvm_sparse_decision_function(
     np.ndarray[np.int32_t,   ndim=1, mode='c'] SV_indices,
     np.ndarray[np.int32_t,   ndim=1, mode='c'] SV_indptr,
     np.ndarray[np.float64_t, ndim=1, mode='c'] sv_coef,
+    np.ndarray[np.float64_t, ndim=1, mode='c'] intercept, 
     np.ndarray[np.float64_t, ndim=1, mode='c']
-    intercept, int svm_type, int kernel_type, int
+    dual_objective, int svm_type, int kernel_type, int
     degree, double gamma, double coef0, double
     eps, double C,
     np.ndarray[np.float64_t, ndim=1] class_weight,
@@ -385,7 +393,7 @@ def libsvm_sparse_decision_function(
     model = csr_set_model(param, <int> nSV.shape[0], SV_data.data,
                           SV_indices.shape, SV_indices.data,
                           SV_indptr.shape, SV_indptr.data,
-                          sv_coef.data, intercept.data,
+                          sv_coef.data, intercept.data, dual_objective.data,
                           nSV.data, probA.data, probB.data)
 
     if svm_type > 1:

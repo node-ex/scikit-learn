@@ -570,6 +570,9 @@ class SVC(BaseSVC):
         more information on the multiclass case and training procedure see
         section 8 of [1]_.
 
+    dual_objective_ : array, shape = [n_class * (n_class-1) / 2]
+        The optimal value of the dual objective function.
+
     Examples
     --------
     >>> import numpy as np
@@ -742,6 +745,9 @@ class NuSVC(BaseSVC):
     intercept_ : array, shape = [n_class * (n_class-1) / 2]
         Constants in decision function.
 
+    dual_objective_ : array, shape = [n_class * (n_class-1) / 2]
+        The optimal value of the dual objective function.
+
     Examples
     --------
     >>> import numpy as np
@@ -877,6 +883,12 @@ class SVR(BaseLibSVM, RegressorMixin):
     intercept_ : array, shape = [1]
         Constants in decision function.
 
+    dual_objective_ : array, shape = [n_class * (n_class-1) / 2]
+        The optimal value of the dual objective function.
+
+    sample_weight : array-like, shape = [n_samples]
+            Individual weights for each sample
+
     Examples
     --------
     >>> from sklearn.svm import SVR
@@ -1003,6 +1015,9 @@ class NuSVR(BaseLibSVM, RegressorMixin):
 
     intercept_ : array, shape = [1]
         Constants in decision function.
+
+    dual_objective_ : array, shape = [n_class * (n_class-1) / 2]
+        The optimal value of the dual objective function.
 
     Examples
     --------
@@ -1142,6 +1157,9 @@ class OneClassSVM(BaseLibSVM, OutlierMixin):
         We have the relation: decision_function = score_samples - `offset_`.
         The offset is the opposite of `intercept_` and is provided for
         consistency with other outlier detection algorithms.
+
+    dual_objective_ : array, shape = [n_classes-1]
+        The optimal value of the dual objective function.
 
     """
 
@@ -1324,6 +1342,10 @@ class SVDD(BaseLibSVM):
 
     intercept_ : array, shape = [n_classes-1]
         Constants in decision function.
+
+    dual_objective_ : array, shape = [n_classes-1]
+        The optimal value of the dual objective function.
+
 
     References
     ----------

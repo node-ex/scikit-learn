@@ -147,6 +147,9 @@ def fit(
     intercept : array
         intercept in decision function
 
+    dual_objective : array
+        The optimal objective values of hte Dual for the decision function
+
     probA, probB : array
         probability estimates, empty array for probability=False
     """
@@ -204,6 +207,10 @@ def fit(
     intercept = np.empty(int((n_class*(n_class-1))/2), dtype=np.float64)
     copy_intercept (intercept.data, model, intercept.shape)
 
+    cdef np.ndarray[np.float64_t, ndim=1, mode='c'] dual_objective
+    dual_objective = np.empty(int((n_class*(n_class-1))/2), dtype=np.float64)
+    copy_dual_objective (dual_objective.data, model, dual_objective.shape)
+
     cdef np.ndarray[np.int32_t, ndim=1, mode='c'] support
     support = np.empty (SV_len, dtype=np.int32)
     copy_support (support.data, model)
@@ -241,7 +248,7 @@ def fit(
     free(problem.x)
 
     return (support, support_vectors, n_class_SV, sv_coef, intercept,
-           probA, probB, fit_status)
+           dual_objective, probA, probB, fit_status)
 
 
 cdef void set_predict_params(
@@ -272,6 +279,7 @@ def predict(np.ndarray[np.float64_t, ndim=2, mode='c'] X,
             np.ndarray[np.int32_t, ndim=1, mode='c'] nSV,
             np.ndarray[np.float64_t, ndim=2, mode='c'] sv_coef,
             np.ndarray[np.float64_t, ndim=1, mode='c'] intercept,
+            np.ndarray[np.float64_t, ndim=1, mode='c'] dual_objective,
             np.ndarray[np.float64_t, ndim=1, mode='c'] probA=np.empty(0),
             np.ndarray[np.float64_t, ndim=1, mode='c'] probB=np.empty(0),
             int svm_type=0, kernel='rbf', int degree=3,
@@ -318,7 +326,8 @@ def predict(np.ndarray[np.float64_t, ndim=2, mode='c'] X,
                        class_weight_label.data, class_weight.data)
     model = set_model(&param, <int> nSV.shape[0], SV.data, SV.shape,
                       support.data, support.shape, sv_coef.strides,
-                      sv_coef.data, intercept.data, nSV.data, probA.data, probB.data)
+                      sv_coef.data, intercept.data, dual_objective.data,
+                      nSV.data, probA.data, probB.data)
 
     #TODO: use check_model
     try:
@@ -340,6 +349,7 @@ def predict_proba(
     np.ndarray[np.int32_t, ndim=1, mode='c'] nSV,
     np.ndarray[np.float64_t, ndim=2, mode='c'] sv_coef,
     np.ndarray[np.float64_t, ndim=1, mode='c'] intercept,
+    np.ndarray[np.float64_t, ndim=1, mode='c'] dual_objective,
     np.ndarray[np.float64_t, ndim=1, mode='c'] probA=np.empty(0),
     np.ndarray[np.float64_t, ndim=1, mode='c'] probB=np.empty(0),
     int svm_type=0, kernel='rbf', int degree=3,
@@ -384,8 +394,8 @@ def predict_proba(
                        class_weight_label.data, class_weight.data)
     model = set_model(&param, <int> nSV.shape[0], SV.data, SV.shape,
                       support.data, support.shape, sv_coef.strides,
-                      sv_coef.data, intercept.data, nSV.data,
-                      probA.data, probB.data)
+                      sv_coef.data, intercept.data, dual_objective.data,
+                      nSV.data, probA.data, probB.data)
 
     cdef np.npy_intp n_class = get_nr(model)
     try:
@@ -407,6 +417,7 @@ def decision_function(
     np.ndarray[np.int32_t, ndim=1, mode='c'] nSV,
     np.ndarray[np.float64_t, ndim=2, mode='c'] sv_coef,
     np.ndarray[np.float64_t, ndim=1, mode='c'] intercept,
+    np.ndarray[np.float64_t, ndim=1, mode='c'] dual_objective,
     np.ndarray[np.float64_t, ndim=1, mode='c'] probA=np.empty(0),
     np.ndarray[np.float64_t, ndim=1, mode='c'] probB=np.empty(0),
     int svm_type=0, kernel='rbf', int degree=3,
@@ -438,8 +449,8 @@ def decision_function(
 
     model = set_model(&param, <int> nSV.shape[0], SV.data, SV.shape,
                       support.data, support.shape, sv_coef.strides,
-                      sv_coef.data, intercept.data, nSV.data,
-                      probA.data, probB.data)
+                      sv_coef.data, intercept.data, dual_objective.data,
+                      nSV.data, probA.data, probB.data)
 
     if svm_type > 1:
         n_class = 1

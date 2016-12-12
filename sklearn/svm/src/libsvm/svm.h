@@ -78,6 +78,7 @@ struct svm_model
 
 	int *sv_ind;            /* index of support vectors */
 
+	double *obj;		/* the value of the dual objective (obj[k*(k-1)/2]) */
 	double *rho;		/* constants in decision functions (rho[k*(k-1)/2]) */
 	double *probA;		/* pariwise probability information */
 	double *probB;
@@ -103,6 +104,7 @@ struct svm_csr_model
 
         int *sv_ind;            /* index of support vectors */
 
+	double *obj;		/* the value of the dual objective (obj[k*(k-1)/2]) */
 	double *rho;		/* constants in decision functions (rho[k*(k-1)/2]) */
 	double *probA;		/* pariwise probability information */
 	double *probB;

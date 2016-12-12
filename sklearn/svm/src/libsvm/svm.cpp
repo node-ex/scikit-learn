@@ -1935,6 +1935,7 @@ struct decision_function
 {
 	double *alpha;
 	double rho;	
+	double obj;	
 };
 
 static decision_function svm_train_one(
@@ -2004,6 +2005,7 @@ static decision_function svm_train_one(
 	decision_function f;
 	f.alpha = alpha;
 	f.rho = si.rho;
+	f.obj = si.obj;
 	return f;
 }
 
@@ -2491,6 +2493,9 @@ PREFIX(model) *PREFIX(train)(const PREFIX(problem) *prob, const svm_parameter *p
 		model->rho = Malloc(double,1);
 		model->rho[0] = f.rho;
 
+		model->obj = Malloc(double,1);
+		model->obj[0] = f.obj;
+
 		int nSV = 0;
 		int i;
 		for(i=0;i<prob->l;i++)
@@ -2628,6 +2633,10 @@ PREFIX(model) *PREFIX(train)(const PREFIX(problem) *prob, const svm_parameter *p
 		model->rho = Malloc(double,nr_class*(nr_class-1)/2);
 		for(i=0;i<nr_class*(nr_class-1)/2;i++)
 			model->rho[i] = f[i].rho;
+
+		model->obj = Malloc(double,nr_class*(nr_class-1)/2);
+		for(i=0;i<nr_class*(nr_class-1)/2;i++)
+			model->obj[i] = f[i].obj;
 
 		if(param->probability)
 		{

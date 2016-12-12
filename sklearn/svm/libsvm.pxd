@@ -50,10 +50,11 @@ cdef extern from "libsvm_helper.c":
 
     svm_model *set_model (svm_parameter *, int, char *, np.npy_intp *,
                          char *, np.npy_intp *, np.npy_intp *, char *,
-                         char *, char *, char *, char *)
+                         char *, char *, char *, char *, char *)
 
     void copy_sv_coef   (char *, svm_model *)
     void copy_intercept (char *, svm_model *, np.npy_intp *)
+    void copy_dual_objective (char *, svm_model *, np.npy_intp *)
     void copy_SV        (char *, svm_model *, np.npy_intp *)
     int copy_support (char *data, svm_model *model)
     int copy_predict (char *, svm_model *, np.npy_intp *, char *) nogil

@@ -257,8 +257,8 @@ class BaseLibSVM(BaseEstimator, metaclass=ABCMeta):
         # we don't pass **self.get_params() to allow subclasses to
         # add other parameters to __init__
         self.support_, self.support_vectors_, self.n_support_, \
-            self.dual_coef_, self.intercept_, self.probA_, \
-            self.probB_, self.fit_status_ = libsvm.fit(
+            self.dual_coef_, self.intercept_, self.dual_objective_, \
+            self.probA_, self.probB_, self.fit_status_ = libsvm.fit(
                 X, y,
                 svm_type=solver_type, sample_weight=sample_weight,
                 class_weight=self.class_weight_, kernel=kernel, C=self.C,
@@ -280,7 +280,7 @@ class BaseLibSVM(BaseEstimator, metaclass=ABCMeta):
         libsvm_sparse.set_verbosity_wrap(self.verbose)
 
         self.support_, self.support_vectors_, dual_coef_data, \
-            self.intercept_, self.n_support_, \
+            self.intercept_, self.dual_objective_, self.n_support_, \
             self.probA_, self.probB_, self.fit_status_ = \
             libsvm_sparse.libsvm_sparse_train(
                 X.shape[1], X.data, X.indices, X.indptr, y, solver_type,
@@ -341,7 +341,7 @@ class BaseLibSVM(BaseEstimator, metaclass=ABCMeta):
 
         return libsvm.predict(
             X, self.support_, self.support_vectors_, self.n_support_,
-            self._dual_coef_, self._intercept_,
+            self._dual_coef_, self._intercept_, self.dual_objective_,
             self.probA_, self.probB_, svm_type=svm_type, kernel=kernel,
             degree=self.degree, coef0=self.coef0, gamma=self._gamma,
             cache_size=self.cache_size)
@@ -361,7 +361,7 @@ class BaseLibSVM(BaseEstimator, metaclass=ABCMeta):
             self.support_vectors_.data,
             self.support_vectors_.indices,
             self.support_vectors_.indptr,
-            self._dual_coef_.data, self._intercept_,
+            self._dual_coef_.data, self._intercept_, self.dual_objective_,
             LIBSVM_IMPL.index(self._impl), kernel_type,
             self.degree, self._gamma, self.coef0, self.tol,
             C, self.class_weight_,
@@ -420,7 +420,7 @@ class BaseLibSVM(BaseEstimator, metaclass=ABCMeta):
 
         return libsvm.decision_function(
             X, self.support_, self.support_vectors_, self.n_support_,
-            self._dual_coef_, self._intercept_,
+            self._dual_coef_, self._intercept_, self.dual_objective_,
             self.probA_, self.probB_,
             svm_type=LIBSVM_IMPL.index(self._impl),
             kernel=kernel, degree=self.degree, cache_size=self.cache_size,
@@ -440,7 +440,7 @@ class BaseLibSVM(BaseEstimator, metaclass=ABCMeta):
             self.support_vectors_.data,
             self.support_vectors_.indices,
             self.support_vectors_.indptr,
-            self._dual_coef_.data, self._intercept_,
+            self._dual_coef_.data, self._intercept_, self.dual_objective_,
             LIBSVM_IMPL.index(self._impl), kernel_type,
             self.degree, self._gamma, self.coef0, self.tol,
             self.C, self.class_weight_,
@@ -669,7 +669,7 @@ class BaseSVC(BaseLibSVM, ClassifierMixin, metaclass=ABCMeta):
         svm_type = LIBSVM_IMPL.index(self._impl)
         pprob = libsvm.predict_proba(
             X, self.support_, self.support_vectors_, self.n_support_,
-            self._dual_coef_, self._intercept_,
+            self._dual_coef_, self._intercept_, self.dual_objective_,
             self.probA_, self.probB_,
             svm_type=svm_type, kernel=kernel, degree=self.degree,
             cache_size=self.cache_size, coef0=self.coef0, gamma=self._gamma)
@@ -690,7 +690,7 @@ class BaseSVC(BaseLibSVM, ClassifierMixin, metaclass=ABCMeta):
             self.support_vectors_.data,
             self.support_vectors_.indices,
             self.support_vectors_.indptr,
-            self._dual_coef_.data, self._intercept_,
+            self._dual_coef_.data, self._intercept_, self.dual_objective_,
             LIBSVM_IMPL.index(self._impl), kernel_type,
             self.degree, self._gamma, self.coef0, self.tol,
             self.C, self.class_weight_,
