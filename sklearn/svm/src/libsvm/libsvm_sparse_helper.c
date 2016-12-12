@@ -102,8 +102,8 @@ struct svm_csr_model *csr_set_model(struct svm_parameter *param, int nr_class,
                             char *SV_data, npy_intp *SV_indices_dims,
                             char *SV_indices, npy_intp *SV_indptr_dims,
                             char *SV_intptr,
-                            char *sv_coef, char *rho, char *nSV,
-                            char *probA, char *probB)
+                            char *sv_coef, char *rho, char *obj,
+                            char *nSV, char *probA, char *probB)
 {
     struct svm_csr_model *model;
     double *dsv_coef = (double *) sv_coef;
@@ -121,6 +121,8 @@ struct svm_csr_model *csr_set_model(struct svm_parameter *param, int nr_class,
         goto sv_coef_error;
     if ((model->rho = malloc( m * sizeof(double))) == NULL)
         goto rho_error;
+    if ((model->obj = malloc( m * sizeof(double))) == NULL)
+        goto obj_error;
 
     /* in the case of precomputed kernels we do not use
        dense_to_precomputed because we don't want the leading 0. As
@@ -159,6 +161,10 @@ struct svm_csr_model *csr_set_model(struct svm_parameter *param, int nr_class,
         (model->rho)[i] = -((double *) rho)[i];
     }
 
+    for (i=0; i<m; ++i) {
+        (model->obj)[i] = ((double *) obj)[i];
+    }
+
     /*
      * just to avoid segfaults, these features are not wrapped but
      * svm_destroy_model will try to free them.
@@ -186,6 +192,8 @@ probA_error:
     for (i=0; i < model->nr_class-1; i++)
         free(model->sv_coef[i]);
 sv_coef_i_error:
+    free(model->obj);
+obj_error:
     free(model->rho);
 rho_error:
     free(model->sv_coef);
@@ -327,6 +335,16 @@ void copy_intercept(char *data, struct svm_csr_model *model, npy_intp *dims)
     }
 }
 
+void copy_dual_objective(char *data, struct svm_csr_model *model, npy_intp *dims)
+{
+    npy_intp i, n = dims[0];
+    double t, *ddata = (double *) data;
+    for (i=0; i<n; ++i) {
+        *ddata = model->obj[i];
+        ++ddata;
+    }
+}
+
 void copy_support (char *data, struct svm_csr_model *model)
 {
     memcpy (data, model->sv_ind, (model->l) * sizeof(int));
@@ -404,6 +422,7 @@ int free_model(struct svm_csr_model *model)
     if (model == NULL) return -1;
     free(model->SV);
     free(model->sv_coef);
+    free(model->obj);
     free(model->rho);
     free(model->label);
     free(model->probA);
