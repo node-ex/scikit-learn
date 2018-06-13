@@ -665,6 +665,7 @@ class Lars(LinearModel, RegressorMixin):
             if n_targets == 1:
                 self.alphas_ = self.alphas_[0]
                 self.n_iter_ = self.n_iter_[0]
+                self.coef_ = self.coef_[0]
 
         self._set_intercept(X_offset, y_offset, X_scale)
         return self
