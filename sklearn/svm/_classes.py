@@ -1374,6 +1374,8 @@ class SVDD(OutlierMixin, BaseLibSVM):
 
     Read more in the :ref:`User Guide <svm_outlier_detection>`.
 
+    ..versionadded: 0.23
+
     Parameters
     ----------
     kernel : {'linear', 'poly', 'rbf', 'sigmoid', 'precomputed'}, default='rbf'
@@ -1393,9 +1395,6 @@ class SVDD(OutlierMixin, BaseLibSVM):
         - if ``gamma='scale'`` (default) is passed then it uses
           1 / (n_features * X.var()) as value of gamma,
         - if 'auto', uses 1 / n_features.
-
-        .. versionchanged:: 0.22
-           The default value of ``gamma`` changed from 'auto' to 'scale'.
 
     coef0 : float, default=0.0
         Independent term in kernel function.
