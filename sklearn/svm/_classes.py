@@ -1533,8 +1533,7 @@ class SVDD(OutlierMixin, BaseLibSVM):
         dec : ndarray of shape (n_samples,)
             Returns the decision function of the samples.
         """
-        dec = self._decision_function(X).ravel()
-        return dec
+        return self._decision_function(X).ravel()
 
     def score_samples(self, X):
         """Raw scoring function of the samples.
@@ -1549,8 +1548,7 @@ class SVDD(OutlierMixin, BaseLibSVM):
         score_samples : ndarray of shape (n_samples,)
             Returns the (unshifted) scoring function of the samples.
         """
-        score_samples = self.decision_function(X) + self.offset_
-        return score_samples
+        return self.decision_function(X) + self.offset_
 
     def predict(self, X):
         """Perform classification on samples in X.
