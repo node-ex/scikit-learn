@@ -1571,17 +1571,3 @@ class SVDD(OutlierMixin, BaseLibSVM):
         """
         y = super().predict(X)
         return np.asarray(y, dtype=np.intp)
-
-    @deprecated(
-        "The probA_ attribute is deprecated in version 0.23 and will be "
-        "removed in version 0.25.")
-    @property
-    def probA_(self):
-        return self._probA
-
-    @deprecated(
-        "The probB_ attribute is deprecated in version 0.23 and will be "
-        "removed in version 0.25.")
-    @property
-    def probB_(self):
-        return self._probB

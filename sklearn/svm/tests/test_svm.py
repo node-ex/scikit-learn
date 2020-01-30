@@ -1381,7 +1381,6 @@ def test_n_support_oneclass_svr():
 
 # TODO: Remove in 0.25 when probA_ and probB_ are deprecated
 @pytest.mark.parametrize("SVMClass, data", [
-    (svm.SVDD, (X, )),
     (svm.OneClassSVM, (X, )),
     (svm.SVR, (X, Y))
 ])
