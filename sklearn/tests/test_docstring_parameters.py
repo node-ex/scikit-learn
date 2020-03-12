@@ -241,7 +241,7 @@ def test_fit_docstring_attributes(name, Estimator):
                'PassiveAggressiveClassifier', 'Perceptron', 'RBFSampler',
                'RadiusNeighborsClassifier', 'RadiusNeighborsRegressor',
                'RadiusNeighborsTransformer', 'RandomTreesEmbedding', 'SVR',
-               'SkewedChi2Sampler'}
+               'SkewedChi2Sampler', 'SVDD'}
     if Estimator.__name__ in IGNORED:
         pytest.xfail(
             reason="Classifier has too many undocumented attributes.")
